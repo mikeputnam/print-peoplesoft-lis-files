@@ -1,0 +1,106 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/1999/REC-html401-19991224/loose.dtd">
+<html>
+<head>
+<!-- print-lis-files.hta is a point and click way to print .lis files on 
+Windows XP or later. Copyright (C) 2007 Mike Putnam
+
+This program is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software 
+Foundation; either version 2 of the License, or (at your option) any later 
+version. 
+
+This program is distributed in the hope that it will be useful, but WITHOUT 
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. 
+
+You should have received a copy of the GNU General Public License along with 
+this program; if not, write to the Free Software Foundation, Inc., 675 Mass 
+Ave, Cambridge, MA 02139, USA.  
+
+This provides a point and click way to print .lis files on Windows XP or
+later.  .lis files are a file representation of printer-destined data. 
+Initial motivation was for printing .lis files created by PeopleSoft's(Oracle)
+process scheduler (often tax SQR's like 1099's) but are not easily printed by
+opening a text editor. The same affect can be acheived by opening a command 
+console and typing "copy file.lis \\printserver\printer".  This HTA however, is 
+more friendly to a functional PeopleSoft user.
+
+To use, rename from .txt to .hta     Then just double-click on it!
+-->
+<script type="text/vbscript">
+Dim strSelectedFile, strSelectedPrinter
+strSelectedFile = "???"
+strSelectedPrinter = "???"
+
+Sub ListPrinters
+    strComputer = "."
+    Set objWMIService = GetObject _
+        ("winmgmts:" & "{impersonationLevel=impersonate}!\\" & strComputer & "\root\cimv2") 
+    Set colInstalledPrinters = objWMIService.ExecQuery("Select * from Win32_Printer") 
+    For Each objPrinter in colInstalledPrinters 
+        Text = Text & "<input type=""radio"" name=""theprinter"" value=""0"" onClick=""StorePrinterSelection('" _
+            & objPrinter.name & "')"">" & objPrinter.name & "<br/>"
+    Next
+    PrinterListSpan.InnerHTML = Text
+    Call UpdateStatusLine
+End Sub
+
+Sub SelectFile
+    Set objDialog = CreateObject("UserAccounts.CommonDialog")
+    objDialog.Filter = ".lis Files|*.lis|All Files|*.*"
+    objDialog.InitialDir = "C:\"
+    intResult = objDialog.ShowOpen
+    If intResult = 0 Then
+        strSelectedFile = "???"
+        Call UpdateStatusLine
+    Else
+        strSelectedFile = objDialog.FileName
+        FinalSelectionsSpan.InnerHTML = strSelectedFile
+        Call UpdateStatusLine
+    End If
+End Sub
+
+Sub StorePrinterSelection(incoming)
+    strSelectedPrinter = incoming
+    Call UpdateStatusLine
+End Sub
+
+Sub UpdateStatusLine
+    FinalSelectionsSpan.InnerHTML = "You selected: <strong>" & strSelectedFile _
+        & "</strong> on printer <strong>" & strSelectedPrinter & "</strong>"
+End Sub
+
+Sub PrintIt
+    If strSelectedPrinter = "???" Then
+        FinalSelectionsSpan.InnerHTML = "You must pick a printer!"
+    End If
+    If strSelectedFile = "???" Then
+        FinalSelectionsSpan.InnerHTML = "You must pick a file!"
+    End If
+    If strSelectedFile <> "???" and strSelectedPrinter <> "???" Then
+        Set objShell = CreateObject("Wscript.Shell")
+        objShell.Run("%comspec% /c copy """ & strSelectedFile &  """ " & strSelectedPrinter)
+        FinalSelectionsSpan.InnerHTML = "Print job sent to <strong>" & strSelectedPrinter & "</strong><br/>"_
+            & "Click ""Select .LIS File"" to print another file or close this window to exit."
+    End If
+End Sub
+</script>
+<title>Print .LIS Files</title>
+<style type="text/css">
+body {font-family:verdana;font-size:8pt;margin: 20px 0px 20px 0px}
+.generic {font-family:verdana;font-size:8pt;padding: 10px 10px 10px 10px;margin: 20px 20px 20px 20px;border-top:medium solid #000000}
+.buttons {font-family:verdana;font-size:8pt;}
+.title {text-align:center;}
+.statusline {text-align:center;margin:20px 0 0 0}
+#FinalSelectionsSpan {background-color:yellow;font-size:10pt;}
+</style>
+</head>
+<body onLoad="ListPrinters">
+<div class="title"><h3>Print .LIS files</h3></div>
+<div class="generic"><strong>Step 1)</strong> <input class="buttons" type="button" value="Select .LIS File" name="selectfile" onClick="SelectFile"></div>
+<div class="generic"><strong>Step 2)</strong> Select Printer <p></p><span id="PrinterListSpan"></span></div>
+<div class="generic"><strong>Step 3)</strong> <input class="buttons" type="button" value="Print" name="print" onClick="PrintIt"></div>
+<div class="statusline"><span id="FinalSelectionsSpan"></span></div>
+</body>
+</html>
+
